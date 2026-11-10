@@ -92,10 +92,11 @@ public final class Ceiling {
     static Geometry construct(AssetManager assetManager,
             Terrain terrain, ArtResource ceilingResource, List<Point> tiles, TerrainDeformer deformer,
             Set<Point> straightTiles, ClearanceFieldSamples clearanceSamples) {
-        Mesh mesh = createMesh(tiles, deformer, straightTiles, clearanceSamples);
+        Material material = createMaterial(assetManager, terrain, ceilingResource);
+        return construct(tiles, deformer, straightTiles, clearanceSamples, material);
+    }
 
-        Geometry geo = new Geometry("Ceiling", mesh);
-
+    static Material createMaterial(AssetManager assetManager, Terrain terrain, ArtResource ceilingResource) {
         Material mat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
         String textureName = (ceilingResource != null) ? ceilingResource.getName() : "Ceiling";
         TextureKey textureKey = new TextureKey(AssetUtils.getCanonicalAssetKey(
@@ -114,9 +115,15 @@ public final class Ceiling {
         // ground; the ceiling ignores them
         dkMat.setBoolean("IgnoreObjectLights", true);
         dkMat.setFloat("AmbientScale", 0f);
-        geo.setMaterial(dkMat);
-        geo.setShadowMode(RenderQueue.ShadowMode.Off); // Nothing above a ceiling to shadow it
+        return dkMat;
+    }
 
+    static Geometry construct(List<Point> tiles, TerrainDeformer deformer, Set<Point> straightTiles,
+            ClearanceFieldSamples clearanceSamples, Material material) {
+        Mesh mesh = createMesh(tiles, deformer, straightTiles, clearanceSamples);
+        Geometry geo = new Geometry("Ceiling", mesh);
+        geo.setMaterial(material);
+        geo.setShadowMode(RenderQueue.ShadowMode.Off); // Nothing above a ceiling to shadow it
         return geo;
     }
 
@@ -202,6 +209,11 @@ public final class Ceiling {
         mesh.updateBound();
 
         return mesh;
+    }
+
+    static Mesh createMesh(ClearanceField clearanceField, List<Point> tiles, TerrainDeformer deformer,
+            Set<Point> straightTiles) {
+        return createMesh(tiles, deformer, straightTiles, new ClearanceFieldSamples(clearanceField, false));
     }
 
     /**
