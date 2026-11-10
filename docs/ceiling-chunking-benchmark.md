@@ -29,3 +29,23 @@ Chunk sizes 8, 16, 32, 48, and 64 were CPU-swept. Size 32 used 16 view-intersect
 The implementation uses 48-tile spatial chunks, rebuilds only chunks within the clearance/deformer dirty margin, and shares each terrain/ceiling material across its chunks. Exact per-tile position, UV, normal, and index parity passed for digs, fog reveals, chunk-boundary edits, map-edge edits, and nonzero terrain deformation. The full test suite passed.
 
 Broad edits touch every chunk and show a repeatable 1-2% CPU regression; the code retains chunking to preserve view culling after those updates. GPU timings are from a synthetic light distribution, not a live level, and CPU render-submit samples drifted by pass order, so no whole-game FPS or CPU-submission gain is claimed. One renderer pass also reported a 0.752 ms chunk-48 GPU p95 outlier; the other three were 0.165-0.166 ms.
+
+## Consolidation revalidation
+
+Re-run on 2026-11-10 after merging the jMonkeyEngine 3.10.0-beta3 backend,
+using Java 25.0.4.1 and the same RTX 2060 SUPER / driver 617.42:
+
+| Scenario | Full median | 48-tile median | Change |
+| --- | ---: | ---: | ---: |
+| Single-tile dig | 56.883 ms | 16.678 ms | -70.7% |
+| 8x8 room dig | 57.598 ms | 16.874 ms | -70.7% |
+| 16x16 room dig | 54.813 ms | 16.811 ms | -69.3% |
+| 24x24 room dig | 51.928 ms | 53.501 ms | +3.0% |
+| 16x16 fog reveal | 52.282 ms | 52.738 ms | +0.9% |
+
+These CPU figures are medians of nine alternating measurements after six
+warmup pairs in one process. The two broad-edit cases remain small regressions.
+The jME 3.10 renderer harness measured full-map GPU medians of 0.463 ms and
+chunk-48 medians of 0.159 / 0.160 ms in forward and reverse pass order; the
+chunk-48 p95 values were 0.166 ms in both orders. This is still a synthetic
+view and does not establish gameplay FPS or a broad CPU render-submit gain.

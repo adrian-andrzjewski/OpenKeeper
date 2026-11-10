@@ -94,6 +94,12 @@ intervals averaged 6.944 ms on both backends; p95 was 7.110 ms for OpenGL and
 timestamp measurements, so they do not establish a relative GPU performance
 result.
 
+The consolidated tree was re-run on 2026-11-10 with jME 3.10.0-beta3. It
+reported the same capture hash and exact pixel parity. Host frame intervals
+averaged 6.944 ms on OpenGL and 6.943 ms on Vulkan, with p95 values of 7.089
+and 7.122 ms respectively. These remain host-pacing measurements, not a
+renderer speed comparison.
+
 ## Remaining validation
 
 - The complete game could not be launched because this environment has no
