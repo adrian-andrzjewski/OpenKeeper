@@ -96,6 +96,30 @@ test {
     useJUnitPlatform()
 }
 
+tasks.register("mapIndexedGraphBenchmark", JavaExec) {
+    group = ApplicationPlugin.APPLICATION_GROUP
+    description = "Benchmarks deterministic A* paths through the map graph."
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'toniarts.openkeeper.game.navigation.pathfinding.MapIndexedGraphBenchmark'
+}
+
+tasks.register("terrainDeformerBenchmark", JavaExec) {
+    group = "verification"
+    description = "Measures deterministic terrain deformation time and allocation."
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = "toniarts.openkeeper.view.map.TerrainDeformerBenchmark"
+}
+
+tasks.register("sparseTerrainNodesBenchmark", JavaExec) {
+    group = "verification"
+    description = "Measures terrain scene-graph traversal with dense and sparse tile nodes."
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = "toniarts.openkeeper.view.map.SparseTerrainNodesBenchmark"
+}
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(25)

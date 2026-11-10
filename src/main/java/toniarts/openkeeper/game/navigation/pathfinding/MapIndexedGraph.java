@@ -40,12 +40,17 @@ public final class MapIndexedGraph implements IndexedGraph<IMapTileInformation> 
     private final IEntityPositionLookup entityPositionLookup;
     private final int nodeCount;
     private INavigable pathFindable;
+    private final Array<Connection<IMapTileInformation>>[] connectionsByNode;
 
     public MapIndexedGraph(IMapController mapController, IEntityPositionLookup entityPositionLookup) {
         this.mapController = mapController;
         this.entityPositionLookup = entityPositionLookup;
 
         nodeCount = mapController.getMapData().getHeight() * mapController.getMapData().getWidth();
+        @SuppressWarnings("unchecked")
+        Array<Connection<IMapTileInformation>>[] reusableConnections =
+                (Array<Connection<IMapTileInformation>>[]) new Array<?>[nodeCount];
+        connectionsByNode = reusableConnections;
     }
 
     @Override
@@ -72,25 +77,31 @@ public final class MapIndexedGraph implements IndexedGraph<IMapTileInformation> 
     public Array<Connection<IMapTileInformation>> getConnections(IMapTileInformation tile) {
 
         // The connections depend on the creature type
-        Array<Connection<IMapTileInformation>> connections = new Array<>(pathFindable.canMoveDiagonally() ? 8 : 4);
-        boolean valids[] = new boolean[4];
+        int index = getIndex(tile);
+        Array<Connection<IMapTileInformation>> connections = connectionsByNode[index];
+        if (connections == null) {
+            connections = new Array<>(pathFindable.canMoveDiagonally() ? 8 : 4);
+            connectionsByNode[index] = connections;
+        } else {
+            connections.clear();
+        }
 
-        valids[0] = addIfValidCoordinate(tile, tile.getX(), tile.getY() - 1, connections); // North
-        valids[1] = addIfValidCoordinate(tile, tile.getX() + 1, tile.getY(), connections); // East
-        valids[2] = addIfValidCoordinate(tile, tile.getX(), tile.getY() + 1, connections); // South
-        valids[3] = addIfValidCoordinate(tile, tile.getX() - 1, tile.getY(), connections); // West
+        boolean north = addIfValidCoordinate(tile, tile.getX(), tile.getY() - 1, connections); // North
+        boolean east = addIfValidCoordinate(tile, tile.getX() + 1, tile.getY(), connections); // East
+        boolean south = addIfValidCoordinate(tile, tile.getX(), tile.getY() + 1, connections); // South
+        boolean west = addIfValidCoordinate(tile, tile.getX() - 1, tile.getY(), connections); // West
 
         if (pathFindable.canMoveDiagonally()) {
-            if (valids[0] && valids[1]) { // North-East
+            if (north && east) { // North-East
                 addIfValidCoordinate(tile, tile.getX() + 1, tile.getY() - 1, connections);
             }
-            if (valids[0] && valids[3]) { // North-West
+            if (north && west) { // North-West
                 addIfValidCoordinate(tile, tile.getX() - 1, tile.getY() - 1, connections);
             }
-            if (valids[2] && valids[1]) { // South-East
+            if (south && east) { // South-East
                 addIfValidCoordinate(tile, tile.getX() + 1, tile.getY() + 1, connections);
             }
-            if (valids[2] && valids[3]) { // South-West
+            if (south && west) { // South-West
                 addIfValidCoordinate(tile, tile.getX() - 1, tile.getY() + 1, connections);
             }
         }
