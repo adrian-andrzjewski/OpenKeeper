@@ -310,7 +310,7 @@ public final class LightConstants {
      * height must land on jME's y -- copying the components across put the
      * light at floor level, half a tile to the side.
      */
-    public static com.jme3.math.Vector3f toJmeOffset(javax.vecmath.Vector3f mKPos) {
+    public static com.jme3.math.Vector3f toJmeOffset(com.jme3.math.Vector3f mKPos) {
         return toJmeOffset(mKPos, new com.jme3.math.Vector3f());
     }
 
@@ -321,7 +321,7 @@ public final class LightConstants {
      * @param store destination vector
      * @return {@code store}
      */
-    public static com.jme3.math.Vector3f toJmeOffset(javax.vecmath.Vector3f mKPos,
+    public static com.jme3.math.Vector3f toJmeOffset(com.jme3.math.Vector3f mKPos,
             com.jme3.math.Vector3f store) {
         return store.set(mKPos.x, mKPos.z, mKPos.y);
     }
