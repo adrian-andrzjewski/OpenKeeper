@@ -679,9 +679,9 @@ public final class SceneLights {
         texture.setMagFilter(Texture.MagFilter.Bilinear);
         texture.setMinFilter(Texture.MinFilter.BilinearNoMipMaps);
         texture.setWrap(Texture.WrapMode.EdgeClamp);
-        ambientMap = texture;
         ambientMapWidth = width;
         ambientMapHeight = height;
+        ambientMap = texture;
     }
 
     /**

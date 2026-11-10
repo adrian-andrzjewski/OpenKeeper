@@ -36,6 +36,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -174,6 +175,8 @@ public class PlayerEntityViewState extends AbstractAppState {
     /** Arches, big steps, plug and obstacle */
     private static final Set<Integer> DUNGEON_HEART_PART_IDS = Set.of(86, 88, 96, 100);
     private final Map<EntityId, TrackedLight> trackedLights = new HashMap<>(); // Things with a light, driven every frame
+    private final Map<Spatial, Boolean> configuredVertexLightModels = new IdentityHashMap<>();
+    private final Map<Spatial, Boolean> pendingVertexLightModels = new IdentityHashMap<>();
 
     /**
      * A thing whose light is created once and positioned every frame (see
@@ -281,12 +284,14 @@ public class PlayerEntityViewState extends AbstractAppState {
         roomEffectContainer.update();
         shotModelContainer.update();
 
-        // Lighting: keep thing-light positions in sync every frame (owners move).
-        // Vertex material binds are cached on each spatial — applyVertexLight is
-        // a no-op once ready; flicker lives in the shared LightData texture from
-        // LightRules.update, so we do not re-traverse model trees every frame.
+        // Attached thing lights follow moving owners and keep their pulse
+        // behaviour. Entity vertex materials read the shared light texture,
+        // which changes each frame; their material setup only changes when
+        // the model or its geometry does.
         LightRules lightRules = getLightRules();
         if (lightRules != null) {
+            applyPendingVertexLightModels(lightRules);
+
             // Create missing thing lights and follow the (possibly moving)
             // owners: the local translation is what updateModelPosition just
             // set, whereas the world one lags a frame behind. Iterate without
@@ -300,20 +305,42 @@ public class PlayerEntityViewState extends AbstractAppState {
                     lightOwners.remove(entry.getKey());
                 }
             }
-            for (Spatial object : objectModelContainer.getModels()) {
-                AssetUtils.applyVertexLight(assetManager, object, lightRules, false);
-            }
-            for (Spatial object : creatureModelContainer.getModels()) {
-                // Creatures take no room / terrain ambient colour, only lights
-                AssetUtils.applyVertexLight(assetManager, object, lightRules, false, false);
-            }
-            for (Spatial object : doorModelContainer.getModels()) {
-                AssetUtils.applyVertexLight(assetManager, object, lightRules, false);
-            }
-            for (Spatial object : trapModelContainer.getModels()) {
-                AssetUtils.applyVertexLight(assetManager, object, lightRules, false);
-            }
         }
+    }
+
+    private void configureEntityVertexLight(Spatial spatial, boolean useTileAmbient, boolean modelChanged) {
+        Boolean configuredAmbient = configuredVertexLightModels.get(spatial);
+        if (!modelChanged && !pendingVertexLightModels.containsKey(spatial)
+                && Objects.equals(configuredAmbient, useTileAmbient)) {
+            return;
+        }
+
+        if (modelChanged) {
+            AssetUtils.invalidateVertexLight(spatial);
+        }
+
+        LightRules lightRules = getLightRules();
+        if (lightRules == null || !lightRules.hasAmbientMap()) {
+            pendingVertexLightModels.put(spatial, useTileAmbient);
+            return;
+        }
+
+        AssetUtils.applyVertexLight(assetManager, spatial, lightRules, false, useTileAmbient);
+        configuredVertexLightModels.put(spatial, useTileAmbient);
+        pendingVertexLightModels.remove(spatial);
+    }
+
+    private void applyPendingVertexLightModels(LightRules lightRules) {
+        if (!lightRules.hasAmbientMap() || pendingVertexLightModels.isEmpty()) {
+            return;
+        }
+        for (Map.Entry<Spatial, Boolean> entry : pendingVertexLightModels.entrySet()) {
+            Spatial spatial = entry.getKey();
+            boolean useTileAmbient = entry.getValue();
+            AssetUtils.applyVertexLight(assetManager, spatial, lightRules, false, useTileAmbient);
+            configuredVertexLightModels.put(spatial, useTileAmbient);
+        }
+        pendingVertexLightModels.clear();
     }
 
     protected LightRules getLightRules() {
@@ -346,6 +373,8 @@ public class PlayerEntityViewState extends AbstractAppState {
         for (IUnitFlowerControl flowerControl : flowerControls.values()) {
             flowerControl.cleanup();
         }
+        configuredVertexLightModels.clear();
+        pendingVertexLightModels.clear();
 
         super.cleanup();
     }
@@ -589,13 +618,14 @@ public class PlayerEntityViewState extends AbstractAppState {
         }
     }
 
-    private void updateCreatureModelAnimation(Spatial object, Entity e) {
+    private boolean updateCreatureModelAnimation(Spatial object, Entity e) {
         CreatureViewState viewState = e.get(CreatureViewState.class);
 
         Creature creature = kwdFile.getCreature(viewState.creatureId);
         applyThingLight(e.getId(), object, creature.getLight(), LightConstants.CREATURE_LIGHT_INTENSITY);
         IEntityViewControl control = object.getControl(IEntityViewControl.class);
         boolean wasAlreadyDead = control.getCurrentState() == Creature.AnimationType.DEATH_POSE;
+        boolean animationChanged = !Objects.equals(control.getCurrentState(), viewState.state);
         control.setTargetState(viewState.state);
 
         // Trigger the death effect once, when the creature actually dies
@@ -613,19 +643,31 @@ public class PlayerEntityViewState extends AbstractAppState {
             CharredOverlay.apply(object, assetManager);
         }
         applyFogCullHint(object, WorldUtils.vectorToPoint(e.get(Position.class).position), true);
+        return animationChanged;
     }
 
-    private void updateDoorModelState(Spatial object, Entity e) {
+    private boolean updateDoorModelState(Spatial object, Entity e) {
         DoorViewState viewState = e.get(DoorViewState.class);
-        object.getControl(DoorViewControl.class).setTargetState(viewState);
+        DoorViewControl control = object.getControl(DoorViewControl.class);
+        DoorViewState currentState = control.getCurrentState();
+        boolean modelChanged = currentState == null
+                || currentState.open != viewState.open
+                || currentState.locked != viewState.locked
+                || currentState.blueprint != viewState.blueprint;
+        control.setTargetState(viewState);
         applyFogCullHint(object, WorldUtils.vectorToPoint(e.get(Position.class).position), true);
+        return modelChanged;
     }
 
-    private void updateObjectModelState(Spatial object, Entity e) {
+    private boolean updateObjectModelState(Spatial object, Entity e) {
         ObjectViewState viewState = e.get(ObjectViewState.class);
         ObjectViewControl control = object.getControl(ObjectViewControl.class);
+        boolean modelChanged = false;
 
         if (control != null) {
+
+            modelChanged = control.getDataObject().getObjectId() != viewState.objectId
+                    || control.getCurrentState() != viewState;
 
             // Phew, maybe should be dynamic...
             if (control.getDataObject().getObjectId() != viewState.objectId) {
@@ -641,6 +683,7 @@ public class PlayerEntityViewState extends AbstractAppState {
             applyThingLight(e.getId(), object, gameObject.getLight(), LightConstants.OBJECT_LIGHT_INTENSITY,
                     LightConstants.OBJECT_LIGHTS_PULSE, true);
         }
+        return modelChanged;
     }
 
     private void onGameEvent(EventType<GameEvent> type, GameEvent event) {
@@ -816,6 +859,8 @@ public class PlayerEntityViewState extends AbstractAppState {
 
     private void removeModel(Spatial spatial, Entity e) {
         spatial.removeFromParent();
+        configuredVertexLightModels.remove(spatial);
+        pendingVertexLightModels.remove(spatial);
 
         // Stop driving the light first, or update() would re-create it
         trackedLights.remove(e.getId());
@@ -865,16 +910,13 @@ public class PlayerEntityViewState extends AbstractAppState {
         protected void updateObject(Spatial object, Entity e) {
             logger.log(Level.TRACE, "ObjectModelContainer.updateObject({0})", e);
             updateModelPosition(object, e);
-            updateObjectModelState(object, e);
+            boolean modelChanged = updateObjectModelState(object, e);
+            configureEntityVertexLight(object, true, modelChanged);
         }
 
         @Override
         protected void removeObject(Spatial object, Entity e) {
             removeModel(object, e);
-        }
-
-        Spatial[] getModels() {
-            return getArray();
         }
 
     }
@@ -900,16 +942,14 @@ public class PlayerEntityViewState extends AbstractAppState {
         protected void updateObject(Spatial object, Entity e) {
             logger.log(Level.TRACE, "CreatureModelContainer.updateObject({0})", e);
             updateModelPosition(object, e);
-            updateCreatureModelAnimation(object, e);
+            boolean modelChanged = updateCreatureModelAnimation(object, e);
+            // Creatures take no room / terrain ambient colour, only lights.
+            configureEntityVertexLight(object, false, modelChanged);
         }
 
         @Override
         protected void removeObject(Spatial object, Entity e) {
             removeModel(object, e);
-        }
-
-        Spatial[] getModels() {
-            return getArray();
         }
 
     }
@@ -936,17 +976,14 @@ public class PlayerEntityViewState extends AbstractAppState {
         protected void updateObject(Spatial object, Entity e) {
             logger.log(Level.TRACE, "DoorModelContainer.updateObject({0})", e);
             updateModelPosition(object, e); // LOL, but ok
-            updateDoorModelState(object, e);
+            boolean modelChanged = updateDoorModelState(object, e);
+            configureEntityVertexLight(object, true, modelChanged);
         }
 
         @Override
         protected void removeObject(Spatial object, Entity e) {
             removeModel(object, e);
             notifyTerrainOfDoor(e, false);
-        }
-
-        Spatial[] getModels() {
-            return getArray();
         }
 
         /**
@@ -986,6 +1023,7 @@ public class PlayerEntityViewState extends AbstractAppState {
             updateModelPosition(object, e);
             //updateModelAnimation(object, e);
             applyFogCullHint(object, WorldUtils.vectorToPoint(e.get(Position.class).position), true);
+            configureEntityVertexLight(object, true, false);
         }
 
         @Override
@@ -993,9 +1031,6 @@ public class PlayerEntityViewState extends AbstractAppState {
             removeModel(object, e);
         }
 
-        Spatial[] getModels() {
-            return getArray();
-        }
     }
 
     /**

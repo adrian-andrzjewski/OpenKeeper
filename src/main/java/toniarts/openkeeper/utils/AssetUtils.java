@@ -317,12 +317,11 @@ public final class AssetUtils {
      * Lights a model per vertex, like the floor it stands on: sets up its
      * {@code Vertex} materials for a thing (no rock floor) and hooks them
      * up to the shared light data. Materials still on {@code Flat} (old
-     * generated material files) are swapped once.
-     * <p>
-     * Safe to call every frame: after the first successful bind the spatial is
-     * marked ready and further calls are no-ops. Flicker/pulse live in the
-     * shared {@code LightData} texture updated by {@link LightRules#update},
-     * so re-walking the model tree each frame is unnecessary. Call
+     * generated material files) are swapped once. The material setup is cached
+     * after a successful bind, so repeated calls do no model-tree traversal.
+     * Call when the model's geometry or materials are created or replaced,
+     * after the map ambient texture is available. Flicker and pulse data are
+     * updated separately through the shared light data. Call
      * {@link #invalidateVertexLight(Spatial)} when children or materials are
      * replaced (animation swap, charred overlay, variant textures).
      *
