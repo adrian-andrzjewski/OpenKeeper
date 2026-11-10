@@ -94,24 +94,32 @@ intervals averaged 6.944 ms on both backends; p95 was 7.110 ms for OpenGL and
 timestamp measurements, so they do not establish a relative GPU performance
 result.
 
-The consolidated tree was re-run on 2026-11-10 with jME 3.10.0-beta3. It
-reported the same capture hash and exact pixel parity. Host frame intervals
-averaged 6.944 ms on OpenGL and 6.943 ms on Vulkan, with p95 values of 7.089
-and 7.122 ms respectively. These remain host-pacing measurements, not a
-renderer speed comparison.
+The consolidated tree was re-run after the upstream gameplay merge on
+2026-11-10 with jME 3.10.0-beta3. It reported the same capture hash and exact
+pixel parity. Host frame intervals averaged 6.945 ms on OpenGL and 6.990 ms on
+Vulkan, with p95 values of 7.078 and 7.122 ms respectively. These remain
+host-pacing measurements, not GPU timing results.
 
 ## Remaining validation
 
 - The late-campaign OpenGL gameplay suite was run at 1920x1080 with the local
   Dungeon Keeper II installation. All nine visual checkpoints passed in an
-  initial three-run session. A follow-up run after fixing a missing trap-icon
-  fallback passed cp00 and cp02 but failed cp01 (SSIM 0.793, MAE 4.498), so
-  gameplay visual checkpoints are not yet stable across runs. Actual video
-  playback and full-game Vulkan gameplay parity remain unchecked; the Vulkan
-  smoke scene covers shader compilation, material rendering, and
-  SSAO/translucency processing.
+  initial three-run session before the latest upstream gameplay fixes. Later
+  runs on the consolidated tree failed cp01 (SSIM 0.793 and 0.701; MAE 4.498
+  and 6.025) while cp00 and cp02 passed. The live gameplay image checks remain
+  intermittent, and the checked-in references have not been refreshed for
+  those upstream fixes. Actual video playback and full-game Vulkan gameplay
+  parity remain unchecked; the Vulkan smoke scene covers shader compilation,
+  material rendering, and SSAO/translucency processing.
 - Vulkan has been packaged and exercised only on Windows x86_64. Linux, macOS,
   Windows ARM64, other GPU vendors, and other driver versions are not yet
   validated and do not expose the Vulkan menu option.
+- A separate Level1 in-game timing sample was collected on the earlier Vulkan
+  backend worktree: three 40-second runs per backend after a 20-second warmup
+  averaged 143.656 FPS on OpenGL and 142.602 FPS on Vulkan/ANGLE (-0.73%).
+  These application frame intervals include CPU work and presentation pacing,
+  and do not measure GPU time. Four of six launches logged a caught
+  `ConcurrentModificationException` during startup warmup; every timed capture
+  completed. Full-game visual parity remains unchecked.
 - Performance work still needs GPU timestamp measurements and representative
   gameplay captures against OpenGL.
