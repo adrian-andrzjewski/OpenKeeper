@@ -1504,7 +1504,8 @@ public final class PlayerScreenController implements IPlayerScreenController {
             String tip = doorIconTextParser.parseText(Utils.getMainTextResourceBundle().getString(Integer.toString(door.getGeneralDescriptionStringId())), door, trap);
             String hint = doorIconTextParser.parseText(Utils.getMainTextResourceBundle().getString("1783"), door, trap);
 
-            return createIcon(door.getDoorId(), "door", door.getGuiIcon(), tip, hint, true, false);
+            return createIcon(door.getDoorId(), "door",
+                    resolveGuiIconName(door.getGuiIcon(), "gui\\traps\\w-tba"), tip, hint, true, false);
         }
 
         return createIcon(door.getId(),
@@ -1517,7 +1518,8 @@ public final class PlayerScreenController implements IPlayerScreenController {
             String tip = trapIconTextParser.parseText(Utils.getMainTextResourceBundle().getString(Integer.toString(trap.getGeneralDescriptionStringId())), trap);
             String hint = trapIconTextParser.parseText(Utils.getMainTextResourceBundle().getString("1783"), trap);
 
-            return createIcon(trap.getTrapId(), "trap", trap.getGuiIcon(), tip, hint, true, false);
+            return createIcon(trap.getTrapId(), "trap",
+                    resolveGuiIconName(trap.getGuiIcon(), "gui\\traps\\w-tba"), tip, hint, true, false);
         }
 
         return createIcon(trap.getId(),
@@ -1526,6 +1528,10 @@ public final class PlayerScreenController implements IPlayerScreenController {
 
     public ControlBuilder createIcon(final int id, final String type, final ArtResource guiIcon, final String tooltip, final String hint, final boolean allowSelect, final boolean hilightGold) {
         return createIcon(id, type, guiIcon.getName(), tooltip, hint, allowSelect, hilightGold);
+    }
+
+    static String resolveGuiIconName(ArtResource guiIcon, String fallback) {
+        return guiIcon == null ? fallback : guiIcon.getName();
     }
 
     public ControlBuilder createIcon(final int id, final String type, final String guiIcon, final String tooltip, final String hint, final boolean allowSelect, final boolean hilightGold) {

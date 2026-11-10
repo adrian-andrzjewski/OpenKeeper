@@ -18,6 +18,7 @@ package toniarts.openkeeper.benchmark;
 
 import com.jme3.app.Application;
 import com.jme3.system.AppSettings;
+import com.jme3.system.JmeVersion;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.management.ManagementFactory;
@@ -76,7 +77,7 @@ public final class BenchmarkResultWriter {
         Map<String, Object> engine = new LinkedHashMap<>();
         engine.put("name", Main.TITLE);
         engine.put("version", Main.VERSION);
-        engine.put("jmonkeyengine", "3.9.0-stable");
+        engine.put("jmonkeyengine", JmeVersion.VERSION_FULL);
         engine.put("javaVersion", System.getProperty("java.version"));
         engine.put("javaVendor", System.getProperty("java.vendor"));
         engine.put("javaVmName", System.getProperty("java.vm.name"));

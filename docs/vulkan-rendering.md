@@ -102,12 +102,14 @@ renderer speed comparison.
 
 ## Remaining validation
 
-- The complete game could not be launched because this environment has no
-  original Dungeon Keeper II installation. Full-scene material, gamma
-  correction, actual video playback, and gameplay parity remain to be checked
-  with those assets. Shader compilation and material rendering for the terrain,
-  creature lighting, unit flower, progress indicator, and movie materials, plus
-  SSAO/translucency processing, are covered by the smoke scene.
+- The late-campaign OpenGL gameplay suite was run at 1920x1080 with the local
+  Dungeon Keeper II installation. All nine visual checkpoints passed in an
+  initial three-run session. A follow-up run after fixing a missing trap-icon
+  fallback passed cp00 and cp02 but failed cp01 (SSIM 0.793, MAE 4.498), so
+  gameplay visual checkpoints are not yet stable across runs. Actual video
+  playback and full-game Vulkan gameplay parity remain unchecked; the Vulkan
+  smoke scene covers shader compilation, material rendering, and
+  SSAO/translucency processing.
 - Vulkan has been packaged and exercised only on Windows x86_64. Linux, macOS,
   Windows ARM64, other GPU vendors, and other driver versions are not yet
   validated and do not expose the Vulkan menu option.
