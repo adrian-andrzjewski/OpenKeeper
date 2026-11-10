@@ -685,6 +685,14 @@ public final class SceneLights {
     }
 
     /**
+     * Whether the map-sized ambient texture is available for material setup.
+     * The volatile texture write publishes its dimensions to other threads.
+     */
+    public boolean isAmbientMapInitialized() {
+        return ambientMap != null;
+    }
+
+    /**
      * Whether the map-sized ambient texture has been created.
      *
      * @return true after {@link #initAmbientMap(int, int)}

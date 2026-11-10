@@ -172,6 +172,14 @@ test {
     useJUnitPlatform()
 }
 
+tasks.register("terrainDeformerBenchmark", JavaExec) {
+    group = "verification"
+    description = "Measures deterministic terrain deformation time and allocation."
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = "toniarts.openkeeper.view.map.TerrainDeformerBenchmark"
+}
+
 tasks.register("fogDoorLookupBenchmark", JavaExec) {
     group = "verification"
     description = "Measures line-of-sight door lookup alternatives."

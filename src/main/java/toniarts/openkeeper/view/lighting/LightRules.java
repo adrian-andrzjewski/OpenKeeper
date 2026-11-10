@@ -366,6 +366,15 @@ public final class LightRules {
     }
 
     /**
+     * Whether the map-sized ambient texture is available for material setup.
+     *
+     * @return true after {@link #initAmbientMap(int, int)}
+     */
+    public boolean isAmbientMapInitialized() {
+        return sceneLights.isAmbientMapInitialized();
+    }
+
+    /**
      * @see SceneLights#setTileAmbient(int, int, ColorRGBA, boolean)
      */
     public void setTileAmbient(int x, int y, ColorRGBA ambient, boolean explored) {
