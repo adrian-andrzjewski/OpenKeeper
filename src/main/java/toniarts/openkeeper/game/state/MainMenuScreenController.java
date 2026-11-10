@@ -76,6 +76,7 @@ import toniarts.openkeeper.tools.convert.map.IKwdMap;
 import toniarts.openkeeper.utils.AssetUtils;
 import toniarts.openkeeper.utils.DisplayMode;
 import toniarts.openkeeper.utils.DisplayModeUtils;
+import toniarts.openkeeper.utils.GraphicsBackend;
 import toniarts.openkeeper.utils.PathUtils;
 import toniarts.openkeeper.utils.Utils;
 
@@ -296,7 +297,7 @@ public final class MainMenuScreenController implements IMainMenuScreenController
         DropDown refresh = screen.findNiftyControl("refreshRate", DropDown.class);
         CheckBox fullscreen = screen.findNiftyControl("fullscreen", CheckBox.class);
         CheckBox vsync = screen.findNiftyControl("verticalSync", CheckBox.class);
-        DropDown ogl = screen.findNiftyControl("openGl", DropDown.class);
+        DropDown renderer = screen.findNiftyControl("graphicsRenderer", DropDown.class);
         DropDown quality = screen.findNiftyControl("graphicsQualityPreset", DropDown.class);
         DropDown aa = screen.findNiftyControl("antialiasing", DropDown.class);
         DropDown af = screen.findNiftyControl("anisotropicFiltering", DropDown.class);
@@ -311,7 +312,7 @@ public final class MainMenuScreenController implements IMainMenuScreenController
         settings.getAppSettings().setFrequency((Integer) refresh.getSelection());
         settings.getAppSettings().setFullscreen(fullscreen.isChecked());
         settings.getAppSettings().setVSync(vsync.isChecked());
-        settings.getAppSettings().setRenderer((String) ogl.getSelection());
+        settings.getAppSettings().setRenderer(GraphicsBackend.toRenderer((String) renderer.getSelection()));
         GraphicsQualityPreset preset = (GraphicsQualityPreset) quality.getSelection();
         AntiAliasingMode aaMode = (AntiAliasingMode) aa.getSelection();
         int anisotropy = (Integer) af.getSelection();
@@ -879,10 +880,10 @@ public final class MainMenuScreenController implements IMainMenuScreenController
         }
         af.selectItem(selectedAF);
 
-        // OpenGL
-        DropDown ogl = screen.findNiftyControl("openGl", DropDown.class);
-        ogl.addAllItems(Settings.OPENGL);
-        ogl.selectItem(settings.getRenderer());
+        // Graphics renderer
+        DropDown renderer = screen.findNiftyControl("graphicsRenderer", DropDown.class);
+        renderer.addAllItems(Settings.RENDERERS);
+        renderer.selectItem(GraphicsBackend.toOption(settings.getRenderer()));
 
         // SSAO
         CheckBox ssao = screen.findNiftyControl("ssao", CheckBox.class);

@@ -66,8 +66,6 @@ import java.util.Queue;
 import java.util.ResourceBundle;
 import javax.imageio.ImageIO;
 import javax.swing.JFrame;
-import org.lwjgl.glfw.GLFW;
-import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.*;
 import toniarts.openkeeper.audio.plugins.MP2Loader;
 import toniarts.openkeeper.cinematics.CameraSweepDataLoader;
@@ -76,7 +74,7 @@ import toniarts.openkeeper.game.data.Settings;
 import toniarts.openkeeper.game.sound.SoundCategory;
 import toniarts.openkeeper.game.sound.GlobalCategory;
 import toniarts.openkeeper.game.sound.SoundManager;
- import toniarts.openkeeper.utils.WorldUtils;
+import toniarts.openkeeper.utils.WorldUtils;
 import toniarts.openkeeper.view.PlayerCameraState;
 import toniarts.openkeeper.game.state.MainMenuState;
 import toniarts.openkeeper.game.state.SoundState;
@@ -89,6 +87,7 @@ import toniarts.openkeeper.benchmark.BenchmarkAppState;
 import toniarts.openkeeper.benchmark.BenchmarkConfig;
 import toniarts.openkeeper.post.PostProcessPipeline;
 import toniarts.openkeeper.tools.convert.AssetsConverter;
+import toniarts.openkeeper.utils.GraphicsBackend;
 import toniarts.openkeeper.utils.PathUtils;
 import toniarts.openkeeper.utils.SettingUtils;
 import toniarts.openkeeper.utils.Utils;
@@ -133,8 +132,9 @@ public final class Main extends SimpleApplication {
         // Read settings and convert resources if needed
         app.showSettings = false;
         initSettings(app);
+        GraphicsBackend.prepareForStartup(app.settings);
         if (debug)
-            app.settings.putBoolean("RendererDebug", true); // create a debug GL context
+            app.settings.putBoolean("RendererDebug", true);
 
         if (benchmarkConfig.isEnabled()) {
             applyBenchmarkSettings(app);
@@ -262,7 +262,7 @@ public final class Main extends SimpleApplication {
         }
 
         // If the folder is ok, check the conversion
-        if (folderOk && (AssetsConverter.isConversionNeeded(Main.getSettings()))) {
+        if (folderOk && (AssetsConverter.isConversionNeeded(Main.getApplicationSettings()))) {
             logger.log(Level.INFO, "Need to convert the assets!");
             saveSetup = true;
 
@@ -326,7 +326,7 @@ public final class Main extends SimpleApplication {
      * @see #getUserSettings()
      * @return application settings
      */
-    public static AppSettings getSettings() {
+    public static AppSettings getApplicationSettings() {
         return SettingUtils.getInstance().getSettings();
     }
 
@@ -439,29 +439,8 @@ public final class Main extends SimpleApplication {
         SoundManager.tick();
     }
 
-    /**
-     * Turns the window into a borderless window that covers the primary
-     * monitor. The monitor's current mode is kept, so there is no video mode
-     * switch and the window is not minimised when it loses the focus.
-     */
-    private void setBorderless() {
-        long window = ((LwjglWindow) context).getWindowHandle();
-        GLFWVidMode mode = GLFW.glfwGetVideoMode(GLFW.glfwGetPrimaryMonitor());
-        if (mode == null) {
-            return;
-        }
-        GLFW.glfwSetWindowAttrib(window, GLFW.GLFW_DECORATED, GLFW.GLFW_FALSE);
-        GLFW.glfwSetWindowPos(window, 0, 0);
-        GLFW.glfwSetWindowSize(window, mode.width(), mode.height());
-    }
-
     @Override
     public void simpleInitApp() {
-
-        // Borderless fullscreen, a monitor sized window without decorations
-        if (Settings.getInstance().getBoolean(Settings.Setting.BORDERLESS)) {
-            setBorderless();
-        }
 
         // Escape opens the game menu (PAUSE_OR_OPTIONS), it must not quit the application
         if (inputManager.hasMapping(INPUT_MAPPING_EXIT)) {
@@ -469,12 +448,14 @@ public final class Main extends SimpleApplication {
         }
 
         if (debug) {
-            ((GLRenderer)renderer).setDebugEnabled(true); // get debug names for GL objects
-            if (GL.getCapabilities().OpenGL43) {
+            ((GLRenderer)renderer).setDebugEnabled(true);
+            if (!GraphicsBackend.isVulkan(getSettings()) && GL.getCapabilities().OpenGL43) {
                 GLUtil.setupDebugMessageCallback();
                 GL43C.glDebugMessageControl(GL43.GL_DEBUG_SOURCE_APPLICATION, GL43.GL_DONT_CARE, GL43.GL_DONT_CARE, (int[]) null, false);
             }
         }
+
+        GraphicsBackend.setWindowTitleForActiveRenderer(getContext(), TITLE);
 
         // Distribution locator
         getAssetManager().registerLocator(AssetsConverter.getAssetsFolder(), FileLocator.class);
@@ -699,6 +680,7 @@ public final class Main extends SimpleApplication {
     public void restart() {
         try {
             settings = Settings.getInstance().getAppSettings();
+            GraphicsBackend.prepareForStartup(settings);
             super.restart();
 
             // FIXME: This should go to handle error
