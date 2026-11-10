@@ -180,6 +180,14 @@ tasks.register("terrainDeformerBenchmark", JavaExec) {
     mainClass = "toniarts.openkeeper.view.map.TerrainDeformerBenchmark"
 }
 
+tasks.register("mapColourClassifierBenchmark", JavaExec) {
+    group = ApplicationPlugin.APPLICATION_GROUP
+    description = "Benchmarks deterministic full-map colour classification."
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'toniarts.openkeeper.game.map.MapColourClassifierBenchmark'
+}
+
 tasks.register("fogDoorLookupBenchmark", JavaExec) {
     group = "verification"
     description = "Measures line-of-sight door lookup alternatives."
