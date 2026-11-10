@@ -6,8 +6,10 @@ arrays. It is kept separate from the consolidated production branch.
 
 ## Validation
 
-The full test task and `mapIndexedGraphBenchmark` passed with tasks forced to
-rerun on 2026-11-10. The benchmark builds deterministic 85x85 maps and checks
+The full test task, including `MapIndexedGraphTest`, and
+`mapIndexedGraphBenchmark` passed with tasks forced to rerun on 2026-11-10.
+The unit test checks per-source array and edge reuse, path reconstruction, and
+terrain changes. The benchmark builds deterministic 85x85 maps and checks
 path checksums in three profiles. Repeated measurements were:
 
 | Scenario | First run time change | Forced rerun time change | Allocation change |
