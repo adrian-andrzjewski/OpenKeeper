@@ -17,7 +17,6 @@
 package toniarts.openkeeper.game.navigation.pathfinding;
 
 import com.badlogic.gdx.ai.pfa.Connection;
-import com.badlogic.gdx.ai.pfa.DefaultConnection;
 import com.badlogic.gdx.ai.pfa.indexed.IndexedGraph;
 import com.badlogic.gdx.utils.Array;
 import toniarts.openkeeper.game.controller.IMapController;
@@ -40,12 +39,17 @@ public final class MapIndexedGraph implements IndexedGraph<IMapTileInformation> 
     private final IEntityPositionLookup entityPositionLookup;
     private final int nodeCount;
     private INavigable pathFindable;
+    private final Array<Connection<IMapTileInformation>>[] connectionsByNode;
 
     public MapIndexedGraph(IMapController mapController, IEntityPositionLookup entityPositionLookup) {
         this.mapController = mapController;
         this.entityPositionLookup = entityPositionLookup;
 
         nodeCount = mapController.getMapData().getHeight() * mapController.getMapData().getWidth();
+        @SuppressWarnings("unchecked")
+        Array<Connection<IMapTileInformation>>[] reusableConnections =
+                (Array<Connection<IMapTileInformation>>[]) new Array<?>[nodeCount];
+        connectionsByNode = reusableConnections;
     }
 
     @Override
@@ -72,25 +76,34 @@ public final class MapIndexedGraph implements IndexedGraph<IMapTileInformation> 
     public Array<Connection<IMapTileInformation>> getConnections(IMapTileInformation tile) {
 
         // The connections depend on the creature type
-        Array<Connection<IMapTileInformation>> connections = new Array<>(pathFindable.canMoveDiagonally() ? 8 : 4);
-        boolean valids[] = new boolean[4];
+        int index = getIndex(tile);
+        Array<Connection<IMapTileInformation>> connections = connectionsByNode[index];
+        if (connections == null) {
+            connections = new Array<>(false, 8);
+            connectionsByNode[index] = connections;
+        } else {
+            // Keep the previous edge objects in items[]; they are reused below
+            // so the A* node records can safely retain their parent connection
+            // until path reconstruction finishes.
+            connections.size = 0;
+        }
 
-        valids[0] = addIfValidCoordinate(tile, tile.getX(), tile.getY() - 1, connections); // North
-        valids[1] = addIfValidCoordinate(tile, tile.getX() + 1, tile.getY(), connections); // East
-        valids[2] = addIfValidCoordinate(tile, tile.getX(), tile.getY() + 1, connections); // South
-        valids[3] = addIfValidCoordinate(tile, tile.getX() - 1, tile.getY(), connections); // West
+        boolean north = addIfValidCoordinate(tile, tile.getX(), tile.getY() - 1, connections); // North
+        boolean east = addIfValidCoordinate(tile, tile.getX() + 1, tile.getY(), connections); // East
+        boolean south = addIfValidCoordinate(tile, tile.getX(), tile.getY() + 1, connections); // South
+        boolean west = addIfValidCoordinate(tile, tile.getX() - 1, tile.getY(), connections); // West
 
         if (pathFindable.canMoveDiagonally()) {
-            if (valids[0] && valids[1]) { // North-East
+            if (north && east) { // North-East
                 addIfValidCoordinate(tile, tile.getX() + 1, tile.getY() - 1, connections);
             }
-            if (valids[0] && valids[3]) { // North-West
+            if (north && west) { // North-West
                 addIfValidCoordinate(tile, tile.getX() - 1, tile.getY() - 1, connections);
             }
-            if (valids[2] && valids[1]) { // South-East
+            if (south && east) { // South-East
                 addIfValidCoordinate(tile, tile.getX() + 1, tile.getY() + 1, connections);
             }
-            if (valids[2] && valids[3]) { // South-West
+            if (south && west) { // South-West
                 addIfValidCoordinate(tile, tile.getX() - 1, tile.getY() + 1, connections);
             }
         }
@@ -105,18 +118,57 @@ public final class MapIndexedGraph implements IndexedGraph<IMapTileInformation> 
         if (tile != null) {
             Float cost = pathFindable.getCost(startTile, tile, mapController, entityPositionLookup);
             if (cost != null) {
-                connections.add(new DefaultConnection<IMapTileInformation>(startTile, tile) {
-
-                    @Override
-                    public float getCost() {
-                        return cost;
-                    }
-
-                });
+                int slot = connections.size;
+                Object[] items = connections.items;
+                Object cachedConnection = items[slot];
+                if (cachedConnection instanceof ReusableConnection reusable) {
+                    reusable.set(startTile, tile, cost);
+                } else {
+                    items[slot] = new ReusableConnection(startTile, tile, cost);
+                }
+                connections.size = slot + 1;
                 return true;
             }
         }
         return false;
+    }
+
+    /**
+     * Mutable edge cached by its source node. The pathfinder retains the
+     * selected edge in each node record while searching, so an edge is only
+     * reused for another query from the same source node. NavigationService
+     * runs searches synchronously and does not expose connection paths.
+     */
+    private static final class ReusableConnection implements Connection<IMapTileInformation> {
+
+        private IMapTileInformation from;
+        private IMapTileInformation to;
+        private float cost;
+
+        private ReusableConnection(IMapTileInformation from, IMapTileInformation to, float cost) {
+            set(from, to, cost);
+        }
+
+        private void set(IMapTileInformation from, IMapTileInformation to, float cost) {
+            this.from = from;
+            this.to = to;
+            this.cost = cost;
+        }
+
+        @Override
+        public IMapTileInformation getFromNode() {
+            return from;
+        }
+
+        @Override
+        public IMapTileInformation getToNode() {
+            return to;
+        }
+
+        @Override
+        public float getCost() {
+            return cost;
+        }
     }
 
     /**

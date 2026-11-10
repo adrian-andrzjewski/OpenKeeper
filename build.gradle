@@ -96,6 +96,14 @@ test {
     useJUnitPlatform()
 }
 
+tasks.register("mapIndexedGraphBenchmark", JavaExec) {
+    group = ApplicationPlugin.APPLICATION_GROUP
+    description = "Benchmarks deterministic A* paths through the map graph."
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'toniarts.openkeeper.game.navigation.pathfinding.MapIndexedGraphBenchmark'
+}
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(25)
