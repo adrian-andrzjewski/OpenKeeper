@@ -586,6 +586,13 @@ public final class PlayerState extends AbstractAppState implements PlayerListene
             }
         }
 
+        // Command-line level runs are used for automated playthroughs. Do not
+        // leave them waiting for input on the end-game screen after a win.
+        if (Main.shouldExitAfterLevelWin(win)) {
+            app.stop();
+            return;
+        }
+
         // Disable us to get rid of all interaction
         setEnabled(false);
         stateManager.attach(new EndGameState(this));

@@ -154,7 +154,7 @@ public final class Main extends SimpleApplication {
      *
      * @param args the arguments list
      */
-    private static void parseArguments(String[] args) {
+    static void parseArguments(String[] args) {
         params = HashMap.newHashMap(args.length);
 
         // Go through the params
@@ -178,6 +178,16 @@ public final class Main extends SimpleApplication {
 
             i++;
         }
+    }
+
+    /**
+     * Whether a completed level should terminate a command-line level run.
+     *
+     * @param won whether the player won the level
+     * @return {@code true} when a level was started with {@code -level} and was won
+     */
+    public static boolean shouldExitAfterLevelWin(boolean won) {
+        return won && hasLevelParameter();
     }
 
     /**
@@ -495,7 +505,7 @@ public final class Main extends SimpleApplication {
                     }
 
                     // Initialize persistent app states
-                    MainMenuState mainMenuState = new MainMenuState(!params.containsKey("level"), assetManager, Main.this);
+                    MainMenuState mainMenuState = new MainMenuState(!hasLevelParameter(), assetManager, Main.this);
                     DetailedProfilerState detailedProfilerState = new DetailedProfilerState();
                     detailedProfilerState.setEnabled(false); // F6
                     getStateManager().getState(StatsAppState.class).toggleStats(); // F5
@@ -522,7 +532,7 @@ public final class Main extends SimpleApplication {
                 al.setColor(ColorRGBA.White);
                 rootNode.addLight(al);
 
-                if (params.containsKey("nomovies") || params.containsKey("level")) {
+                if (params.containsKey("nomovies") || hasLevelParameter()) {
                     startGame();
                 } else {
                     // The fireworks!
@@ -713,7 +723,7 @@ public final class Main extends SimpleApplication {
      * Starts the game, opens up the start menu / level
      */
     private void startGame() {
-        if (params.containsKey("level")) {
+        if (hasLevelParameter()) {
             try {
                 LocalGameSession.createLocalGame(params.get("level"), false, stateManager, this, null);
             } catch (IOException ex) {
@@ -724,6 +734,10 @@ public final class Main extends SimpleApplication {
             // Enable the start menu
             stateManager.getState(MainMenuState.class).setEnabled(true);
         }
+    }
+
+    private static boolean hasLevelParameter() {
+        return params != null && params.containsKey("level");
     }
 
     /**
